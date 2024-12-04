@@ -3,7 +3,6 @@ package repository
 import (
 	"a21hc3NpZ25tZW50/model"
 	"database/sql"
-	"fmt"
 )
 
 type UserRepository interface {
@@ -21,12 +20,7 @@ func NewUserRepo(db *sql.DB) *userRepository {
 }
 
 func (u *userRepository) Add(user model.User) error {
-	err := u.CheckAvail(user)
-	if err != nil {
-		return err
-	}
-
-	_, err = u.db.Exec(
+	_, err := u.db.Exec(
 		"INSERT INTO users (username, password) VALUES ($1, $2)",
 		user.Username,
 		user.Password,
@@ -38,19 +32,17 @@ func (u *userRepository) Add(user model.User) error {
 }
 
 func (u *userRepository) CheckAvail(user model.User) error {
-	var exists bool
-	err := u.db.QueryRow(
-		"SELECT EXISTS(SELECT 1 FROM users WHERE username = $1)",
+	var userDB model.User
+	row := u.db.QueryRow(
+		"SELECT * FROM users WHERE username = $1 and password = $2",
 		user.Username,
-	).Scan(&exists)
+		user.Password,
+	)
 
-	if err != nil {
+	if err := row.Scan(&userDB.ID, &userDB.Username, &userDB.Password); err != nil {
 		return err
 	}
 
-	if exists {
-		return fmt.Errorf("username %s sudah digunakan", user.Username)
-	}
 	return nil
 }
 

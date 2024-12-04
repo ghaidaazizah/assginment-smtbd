@@ -3,7 +3,6 @@ package repository
 import (
 	"a21hc3NpZ25tZW50/model"
 	"database/sql"
-	"fmt"
 )
 
 type SessionsRepository interface {
@@ -47,11 +46,11 @@ func (s *sessionsRepoImpl) DeleteSession(token string) error {
 
 func (s *sessionsRepoImpl) UpdateSessions(session model.Session) error {
 	_, err := s.db.Exec(
-		"UPDATE sessions SET token = $1, username = $2, expiry = $3 WHERE id = $4",
+		"UPDATE sessions SET token = $1, username = $2, expiry = $3 WHERE username = $4",
 		session.Token,
 		session.Username,
 		session.Expiry,
-		session.ID,
+		session.Username,
 	)
 	if err != nil {
 		return err
@@ -60,17 +59,17 @@ func (s *sessionsRepoImpl) UpdateSessions(session model.Session) error {
 }
 
 func (s *sessionsRepoImpl) SessionAvailName(name string) error {
-	row := s.db.QueryRow("SELECT id FROM sessions WHERE username = $1", name)
+	row := s.db.QueryRow("SELECT * FROM sessions WHERE username = $1", name)
 
-	var id int
-	err := row.Scan(&id)
+	var session model.Session
+	err := row.Scan(&session.ID, &session.Token, &session.Username, &session.Expiry)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil
+			return err
 		}
 		return err
 	}
-	return fmt.Errorf("session for user %s already exists", name)
+	return nil
 }
 
 func (s *sessionsRepoImpl) SessionAvailToken(token string) (model.Session, error) {
@@ -80,7 +79,7 @@ func (s *sessionsRepoImpl) SessionAvailToken(token string) (model.Session, error
 	err := row.Scan(&session.ID, &session.Token, &session.Username, &session.Expiry)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return model.Session{}, nil 
+			return model.Session{}, err
 		}
 		return model.Session{}, err
 	}
